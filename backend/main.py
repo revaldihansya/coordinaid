@@ -49,3 +49,19 @@ def add_need(zone: CrisisZone):
     data.append(zone.model_dump()) 
     save_data(data)
     return {"message": "Crisis zone added successfully!", "zone": zone}
+
+# 1. Define the data structure for the incoming messy text
+class DonationManifest(BaseModel):
+    raw_manifest: str
+
+# 2. Route to receive the messy donation text
+@app.post("/api/donate")
+def process_donation(manifest: DonationManifest):
+    # TODO: This is where we will inject the AI logic later!
+    # For now, we are just catching the text and returning a placeholder response.
+    
+    return {
+        "status": "Received by Triage",
+        "original_text": manifest.raw_manifest,
+        "ai_directive": "Pending LLM NLP Integration..."
+    }
