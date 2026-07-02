@@ -1,0 +1,20 @@
+[
+    {
+        "region": "Urban Wildfire Sector",
+        "priority": "Respirators & Burn Kits",
+        "portCapacity": "10% Full",
+        "status": "Critical"
+    },
+    {
+        "region": "Tropical Flood Zone",
+        "priority": "Water & Meds",
+        "portCapacity": "95% Full",
+        "status": "Critical"
+    },
+    {
+        "region": "Alpine Earthquake Zone",
+        "priority": "Tents & Blankets",
+        "portCapacity": "40% Full",
+        "status": "Stable"
+    }
+]
