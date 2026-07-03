@@ -51,12 +51,9 @@ python -m pip install requirements.txt
 ```
 
 #### Setuing up the AI API Key
-```
-You should have a .env file in your backend
-Replace the placeholder your_actual_api_key_here with your own API Key
-.env is included in .gitignore so you don't have to worry about pushing your
-key to your repository
-```
+You should have a .env.example file in your backend
+Replace the placeholder your_actual_api_key_here with your own API Key then rename it to .env
+.env is included in .gitignore so you don't have to worry about pushing your key to your repository
 
 #### Running the backend
 ```bash
@@ -80,6 +77,4 @@ npm run dev
 ```
 
 ### 4. Opening the program
-```
 Check your terminal for the local URL and open it in your browser.
-```
