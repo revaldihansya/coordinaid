@@ -65,7 +65,7 @@ function App() {
 
   return (
     <div style={{ textAlign: 'center', padding: '50px', fontFamily: 'sans-serif' }}>
-      <h1>ResRoute Command Center</h1>
+      <h1>Coordinaid</h1>
       <p>Coordinating relief at the speed of data.</p>
 
       {/* HOME SCREEN */}
