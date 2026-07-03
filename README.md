@@ -24,7 +24,7 @@ Make sure you have the following installed:
 
 ### 1. Clone the Repository
 ```bash
-git clone [https://github.com/YOUR-USERNAME/coordinaid.git](https://github.com/YOUR-USERNAME/coordinaid.git)
+git clone https://github.com/revaldihansya/coordinaid.git
 cd coordinaid
 ```
 
