@@ -149,7 +149,7 @@ function App() {
             <div style={{ marginTop: '30px', padding: '20px', border: '2px solid #51cf66', borderRadius: '8px', width: '400px', textAlign: 'left', background: '#f9f9f9', color: 'black' }}>
               <h3 style={{ margin: '0 0 10px 0', color: '#2b8a3e' }}>System Response</h3>
               <p><strong>Status:</strong> {triageResult.status}</p>
-              <p><strong>AI Action:</strong> {triageResult.ai_directive}</p>
+              <p><strong>AI Extracted:</strong> {triageResult.ai_directive}</p>
               <p style={{ fontStyle: 'italic', fontSize: '14px', color: '#555' }}>"{triageResult.original_text}"</p>
               
               {/* NEW CONFIRM BUTTON */}
