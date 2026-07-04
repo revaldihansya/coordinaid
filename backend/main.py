@@ -4,8 +4,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-# Import the updated matching logic from triage_service_2
-from triage_service_2 import extract_item_category, calculate_routing_score
+# Import the updated matching logic from triage_service
+from triage_service import extract_item_category, calculate_routing_score
 from confirmation_service import load_confirmed_data, add_confirmed_aid, ConfirmedAid
 
 app = FastAPI()
