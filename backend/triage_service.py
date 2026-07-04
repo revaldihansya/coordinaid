@@ -108,18 +108,33 @@ def calculate_routing_score(item_name: str, zone: dict) -> float:
     score = ai_match_score - (congestion * 0.5)
     return score
 
-def extract_item_category(raw_manifest: str) -> str:
-    """Uses AI to extract the primary item category from a raw text manifest."""
+def extract_item_category(raw_manifest: str) -> list:
+    """Uses AI to extract multiple items and quantities into a structured JSON array."""
     prompt = f"""
     You are an AI triage agent for a humanitarian logistics platform. 
-    Read the following unstructured donation manifest and identify the single most prominent or useful category of relief items being offered. 
-    Respond ONLY with the name of the item category (e.g., "Tents", "Water", "Winter Coats", "Medical Supplies"). Do not include any other words or punctuation.
+    Read the following unstructured donation manifest and extract ALL relief items and their quantities.
+    
+    Respond ONLY with a valid JSON array of objects. Do not include markdown formatting, backticks, or conversational text.
+    Format: [{{"item": "string", "quantity": integer}}]
+    If no quantity is specified, estimate a logical default (e.g., 100) or extract the items without quantities if impossible.
     
     Manifest: "{raw_manifest}"
     """
     
     try:
-        return call_ai_with_failover(prompt)
+        response_text = call_ai_with_failover(prompt)
+        
+        # Clean up potential markdown formatting the AI might inject
+        clean_json = response_text.replace("```json", "").replace("```", "").strip()
+        
+        import json
+        extracted_data = json.loads(clean_json)
+        
+        # Ensure it's a list
+        if isinstance(extracted_data, list):
+            return extracted_data
+        return [{"item": "Unknown", "quantity": 0}]
+        
     except Exception as e:
-        print(f"AI API Error: {e}")
-        return "Unknown"
+        print(f"AI JSON Extraction Error: {e}")
+        return [{"item": "Unknown Extraction", "quantity": 0}]
