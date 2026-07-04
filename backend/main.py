@@ -69,7 +69,7 @@ def process_donation(manifest: DonationManifest):
     return {
         "status": "Triage Complete",
         "original_text": manifest.raw_manifest,
-        "ai_directive": f"AI Extracted: '{extracted_item}'. Suggested route: {best_zone} (Match Score: {highest_score}).",
+        "ai_directive": f" '{extracted_item}'. Suggested route: {best_zone} (Match Score: {highest_score}).",
         "extracted_item": extracted_item, 
         "best_zone": best_zone
     }
