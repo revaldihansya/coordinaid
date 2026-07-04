@@ -23,6 +23,7 @@ class CrisisZone(BaseModel):
     priority: str
     portCapacity: str
     status: str
+    dailyBurnRate: int # Added field
 
 DB_FILE = "needs_database.json"
 
