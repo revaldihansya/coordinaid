@@ -1,19 +1,71 @@
 import os
-from google import genai
-from google.genai import types
+import re
+from openai import OpenAI
 from dotenv import load_dotenv
 
-# Initialize the Gemini Client here
+# Load environment variables
 load_dotenv()
-API_KEY = os.getenv("GEMINI_API_KEY")
-client = genai.Client(api_key=API_KEY)
+
+# 1. Initialize AI clients with standard OpenAI SDK
+openrouter_client = OpenAI(
+    base_url="https://openrouter.ai/api/v1",
+    api_key=os.environ.get("OPENROUTER_API_KEY")
+)
+
+groq_client = OpenAI(
+    base_url="https://api.groq.com/openai/v1",
+    api_key=os.environ.get("GROQ_API_KEY")
+)
+
+github_client = OpenAI(
+    base_url="https://models.github.ai/inference",
+    api_key=os.environ.get("GITHUB_TOKEN")
+)
+
+gemini_client = OpenAI(
+    base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+    api_key=os.environ.get("GEMINI_API_KEY")
+)
+
+# 2. Define the failover sequence: (Client Object, Model Name, Service Name)
+# 2. Define the failover sequence: (Client Object, Model Name, Service Name)
+PROVIDERS = [
+    (openrouter_client, "openrouter/free", "OpenRouter"),
+    (groq_client, "llama-3.3-70b-versatile", "Groq"),
+    (github_client, "gpt-4o-mini", "GitHub Models"),
+    (gemini_client, "gemini-3.5-flash", "Gemini")
+]
+
+def call_ai_with_failover(prompt: str) -> str:
+    """Iterates through providers until an API call succeeds."""
+    for client, model, name in PROVIDERS:
+        try:
+            # Skip if the API key is missing to avoid unnecessary network requests
+            if not client.api_key:
+                print(f"[{name}] API key missing. Skipping.")
+                continue
+                
+            response = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": "You are a precise, data-extraction assistant. Only provide the requested output with no conversational filler."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.1
+            )
+            return response.choices[0].message.content.strip()
+        except Exception as e:
+            print(f"[{name}] API call failed: {e}")
+            continue # Attempt the next provider in the chain
+            
+    raise Exception("All AI providers failed or are misconfigured. Please check your .env file and network connection.")
+
 
 def calculate_routing_score(item_name: str, zone: dict) -> float:
-    """Uses Gemini to semantically match the item against regional context, 
-
+    """
+    Uses AI to semantically match the item against regional context, 
     then applies the mathematical deduction for port congestion in Python.
     """
-    # Combine region and priority text to maximize AI situational context
     context_string = f"Region: {zone['region']}. Current Priority Needs: {zone['priority']}."
     
     prompt = f"""
@@ -24,29 +76,27 @@ def calculate_routing_score(item_name: str, zone: dict) -> float:
     Crisis Zone Context: "{context_string}"
     
     Assign a Match Score from 0 to 100:
-    - 100: Absolute perfect match or life-saving necessity for this specific disaster context (e.g., food/water to a flood zone, blankets to an earthquake zone).
+    - 100: Absolute perfect match or life-saving necessity for this specific disaster context.
     - 75: High utility item that significantly aids relief or recovery efforts in this scenario.
     - 50: Moderate utility item; helpful but not immediately critical.
     - 25: Low utility item; has very peripheral relevance to this type of crisis.
     - 0: Completely irrelevant or potentially hazardous/useless for this specific zone.
+    
+    Respond ONLY with the integer number. Do not include any text, symbols, or punctuation.
     """
     
     try:
-        # Use structured output to guarantee an integer score between 0 and 100
-        response = client.models.generate_content(
-            model='gemini-3.5-flash',
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                response_schema=int,
-                temperature=0.1 # Low temperature for consistent matching
-            ),
-        )
-        # Ensure the score stays within the intended boundaries
-        ai_match_score = max(0, min(100, int(response.text.strip())))
+        response_text = call_ai_with_failover(prompt)
+        
+        # Extract the first sequence of digits to prevent parsing errors
+        # if a model leaks conversational filler (e.g., "The score is 75")
+        match = re.search(r'\d+', response_text)
+        if match:
+            ai_match_score = max(0, min(100, int(match.group())))
+        else:
+            ai_match_score = 0
     except Exception as e:
         print(f"AI Match Score Error: {e}")
-        # Default fallback to 0 if the API fails so it doesn't break execution
         ai_match_score = 0
 
     # Calculate port congestion deduction mathematically in Python
@@ -55,7 +105,6 @@ def calculate_routing_score(item_name: str, zone: dict) -> float:
     except ValueError:
         congestion = 50.0 
         
-    # Final calculation combines AI situational awareness with logical port caps
     score = ai_match_score - (congestion * 0.5)
     return score
 
@@ -70,11 +119,7 @@ def extract_item_category(raw_manifest: str) -> str:
     """
     
     try:
-        response = client.models.generate_content(
-            model='gemini-3.5-flash',
-            contents=prompt,
-        )
-        return response.text.strip()
+        return call_ai_with_failover(prompt)
     except Exception as e:
         print(f"AI API Error: {e}")
         return "Unknown"
