@@ -3,6 +3,7 @@ backend/venv/
 backend/__pycache__/
 *.pyc
 .env
+confirmed_aid_database.json
 
 # Frontend
 node_modules/

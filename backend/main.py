@@ -4,8 +4,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-# Import separated logic
-from triage_service import extract_item_category, calculate_routing_score
+# Import the updated matching logic from triage_service_2
+from triage_service_2 import extract_item_category, calculate_routing_score
 from confirmation_service import load_confirmed_data, add_confirmed_aid, ConfirmedAid
 
 app = FastAPI()
@@ -68,14 +68,10 @@ def process_donation(manifest: DonationManifest):
     return {
         "status": "Triage Complete",
         "original_text": manifest.raw_manifest,
-        # Updated wording below
         "ai_directive": f"AI Extracted: '{extracted_item}'. Suggested route: {best_zone} (Match Score: {highest_score}).",
-        # Sending these back specifically to be saved in the confirm database
         "extracted_item": extracted_item, 
         "best_zone": best_zone
     }
-
-# --- NEW CONFIRMED AID ENDPOINTS ---
 
 @app.get("/api/confirmed")
 def get_confirmed_aid():
