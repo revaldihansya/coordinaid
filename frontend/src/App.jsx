@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import ConfirmedAidView from './ConfirmedAidView'
 import './App.css'
 
 function App() {
@@ -11,10 +12,10 @@ function App() {
   })
 
   // -- DONOR PORTAL STATE --
+  const [donorName, setDonorName] = useState('') // New state for Donor Name
   const [donorInput, setDonorInput] = useState('')
   const [triageResult, setTriageResult] = useState(null)
 
-  // -- API: Fetch Needs --
   const fetchNeeds = async () => {
     try {
       const response = await fetch('http://127.0.0.1:8000/api/needs')
@@ -29,7 +30,6 @@ function App() {
     if (currentView === 'requestor') fetchNeeds()
   }, [currentView])
 
-  // -- API: Add New Zone --
   const handleAddZone = async (e) => {
     e.preventDefault() 
     try {
@@ -47,7 +47,6 @@ function App() {
     }
   }
 
-  // -- API: Submit Donation --
   const handleDonate = async (e) => {
     e.preventDefault()
     try {
@@ -57,9 +56,39 @@ function App() {
         body: JSON.stringify({ raw_manifest: donorInput })
       })
       const data = await response.json()
-      setTriageResult(data) // Save the backend's response to display it
+      setTriageResult(data) 
     } catch (error) {
       console.error("Failed to process donation.", error)
+    }
+  }
+
+  // -- NEW API: Confirm Donation --
+  const handleConfirmAid = async () => {
+    if (!triageResult) return;
+
+    const confirmationPayload = {
+      destination_route: triageResult.best_zone,
+      donation: triageResult.extracted_item,
+      donor: donorName || "Anonymous Donor",
+      manifest: triageResult.original_text,
+      timestamp: new Date().toISOString()
+    }
+
+    try {
+      const response = await fetch('http://127.0.0.1:8000/api/confirmed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(confirmationPayload)
+      })
+      if (response.ok) {
+        alert("Aid successfully confirmed on route!")
+        setTriageResult(null)
+        setDonorInput('')
+        setDonorName('')
+        setCurrentView('home')
+      }
+    } catch (error) {
+      console.error("Failed to confirm aid.", error)
     }
   }
 
@@ -76,6 +105,12 @@ function App() {
             <button onClick={() => setCurrentView('donor')} style={{ padding: '20px', fontSize: '18px', cursor: 'pointer' }}>
               📦 Corporate Donor Portal<br/><small>Register incoming supplies</small>
             </button>
+            
+            {/* NEW BUTTON IN BETWEEN */}
+            <button onClick={() => setCurrentView('confirmed')} style={{ padding: '20px', fontSize: '18px', cursor: 'pointer', border: '2px solid #339af0' }}>
+              ✅ Confirmed Routes<br/><small>Track active aid flow</small>
+            </button>
+
             <button onClick={() => setCurrentView('requestor')} style={{ padding: '20px', fontSize: '18px', cursor: 'pointer' }}>
               🚨 Crisis Ground Command<br/><small>Log real-time regional needs</small>
             </button>
@@ -90,6 +125,13 @@ function App() {
           <p>Paste your unstructured manifest below. The AI will parse and route it.</p>
           
           <form onSubmit={handleDonate} style={{ display: 'flex', flexDirection: 'column', gap: '15px', width: '400px', marginTop: '20px' }}>
+            <input 
+              type="text"
+              placeholder="Donor Name / Organization"
+              value={donorName}
+              onChange={(e) => setDonorName(e.target.value)}
+              style={{ padding: '10px', fontSize: '16px', borderRadius: '8px', border: '1px solid #444' }}
+            />
             <textarea 
               rows="6"
               placeholder="e.g., We have 500 tents and 50 boxes of winter coats ready to ship..."
@@ -103,18 +145,30 @@ function App() {
             </button>
           </form>
 
-          {/* Display the result from the Python backend */}
           {triageResult && (
             <div style={{ marginTop: '30px', padding: '20px', border: '2px solid #51cf66', borderRadius: '8px', width: '400px', textAlign: 'left', background: '#f9f9f9', color: 'black' }}>
               <h3 style={{ margin: '0 0 10px 0', color: '#2b8a3e' }}>System Response</h3>
               <p><strong>Status:</strong> {triageResult.status}</p>
               <p><strong>AI Action:</strong> {triageResult.ai_directive}</p>
               <p style={{ fontStyle: 'italic', fontSize: '14px', color: '#555' }}>"{triageResult.original_text}"</p>
+              
+              {/* NEW CONFIRM BUTTON */}
+              <button 
+                onClick={handleConfirmAid} 
+                style={{ width: '100%', marginTop: '15px', padding: '12px', backgroundColor: '#51cf66', color: 'white', fontWeight: 'bold', fontSize: '16px', border: 'none', borderRadius: '5px', cursor: 'pointer' }}
+              >
+                Confirm
+              </button>
             </div>
           )}
 
-          <button onClick={() => {setCurrentView('home'); setTriageResult(null); setDonorInput('')}} style={{ padding: '10px', cursor: 'pointer', marginTop: '40px' }}>← Back to Home</button>
+          <button onClick={() => {setCurrentView('home'); setTriageResult(null); setDonorInput(''); setDonorName('');}} style={{ padding: '10px', cursor: 'pointer', marginTop: '40px' }}>← Back to Home</button>
         </div>
+      )}
+
+      {/* NEW CONFIRMED VIEW ROUTING */}
+      {currentView === 'confirmed' && (
+        <ConfirmedAidView onBack={() => setCurrentView('home')} />
       )}
 
       {/* REQUESTOR SCREEN (GROUND COMMAND) */}

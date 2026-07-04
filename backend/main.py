@@ -1,12 +1,12 @@
-# main.py
 import json
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-# Import your separated logic
+# Import separated logic
 from triage_service import extract_item_category, calculate_routing_score
+from confirmation_service import load_confirmed_data, add_confirmed_aid, ConfirmedAid
 
 app = FastAPI()
 
@@ -54,13 +54,11 @@ class DonationManifest(BaseModel):
 def process_donation(manifest: DonationManifest):
     zones = load_data()
     
-    # 1. Call the AI function from your new file
     extracted_item = extract_item_category(manifest.raw_manifest)
     
     best_zone = "No suitable zone found"
     highest_score = -999 
     
-    # 2. Call the math function from your new file
     for zone in zones:
         score = calculate_routing_score(extracted_item, zone)
         if score > highest_score:
@@ -70,5 +68,20 @@ def process_donation(manifest: DonationManifest):
     return {
         "status": "Triage Complete",
         "original_text": manifest.raw_manifest,
-        "ai_directive": f"AI Extracted: '{extracted_item}'. Routed to {best_zone} (Match Score: {highest_score})."
+        # Updated wording below
+        "ai_directive": f"AI Extracted: '{extracted_item}'. Suggested route: {best_zone} (Match Score: {highest_score}).",
+        # Sending these back specifically to be saved in the confirm database
+        "extracted_item": extracted_item, 
+        "best_zone": best_zone
     }
+
+# --- NEW CONFIRMED AID ENDPOINTS ---
+
+@app.get("/api/confirmed")
+def get_confirmed_aid():
+    return load_confirmed_data()
+
+@app.post("/api/confirmed")
+def confirm_aid(aid: ConfirmedAid):
+    record = add_confirmed_aid(aid)
+    return {"message": "Aid confirmed successfully", "record": record}
