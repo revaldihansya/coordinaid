@@ -61,10 +61,11 @@ def call_ai_with_failover(prompt: str) -> str:
     raise Exception("All AI providers failed or are misconfigured. Please check your .env file and network connection.")
 
 
-def calculate_routing_score(item_name: str, zone: dict) -> float:
+# Add confirmed_data as an optional parameter
+def calculate_routing_score(item_name: str, zone: dict, confirmed_data: list = None) -> float:
     """
     Uses AI to semantically match the item against regional context, 
-    then applies the mathematical deduction for port congestion in Python.
+    then applies deductions for port congestion AND en-route pipeline volume.
     """
     context_string = f"Region: {zone['region']}. Current Priority Needs: {zone['priority']}."
     
@@ -88,8 +89,6 @@ def calculate_routing_score(item_name: str, zone: dict) -> float:
     try:
         response_text = call_ai_with_failover(prompt)
         
-        # Extract the first sequence of digits to prevent parsing errors
-        # if a model leaks conversational filler (e.g., "The score is 75")
         match = re.search(r'\d+', response_text)
         if match:
             ai_match_score = max(0, min(100, int(match.group())))
@@ -99,13 +98,23 @@ def calculate_routing_score(item_name: str, zone: dict) -> float:
         print(f"AI Match Score Error: {e}")
         ai_match_score = 0
 
-    # Calculate port congestion deduction mathematically in Python
+    # 1. Calculate static port congestion deduction
     try:
         congestion = float(zone["portCapacity"].replace("% Full", "").strip())
     except ValueError:
         congestion = 50.0 
         
-    score = ai_match_score - (congestion * 0.5)
+    # 2. Calculate dynamic EN-ROUTE pipeline penalty
+    pipeline_penalty = 0
+    if confirmed_data:
+        # Count how many shipments are actively routed to this specific region
+        en_route_count = sum(1 for aid in confirmed_data if aid.get("destination_route") == zone["region"])
+        
+        # Deduct 10 points for every active shipment heading there to prevent future bottlenecks
+        pipeline_penalty = en_route_count * 10 
+        
+    # Final Score Calculation
+    score = ai_match_score - (congestion * 0.5) - pipeline_penalty
     return score
 
 def extract_item_category(raw_manifest: str) -> list:

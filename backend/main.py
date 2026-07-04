@@ -54,24 +54,53 @@ class DonationManifest(BaseModel):
 @app.post("/api/donate")
 def process_donation(manifest: DonationManifest):
     zones = load_data()
+    # Load confirmed data to check pipeline congestion
+    confirmed_data = load_confirmed_data() 
     
-    extracted_item = extract_item_category(manifest.raw_manifest)
+    # This now returns a list of dictionaries: [{"item": "tents", "quantity": 500}, ...]
+    extracted_data = extract_item_category(manifest.raw_manifest)
     
-    best_zone = "No suitable zone found"
-    highest_score = -999 
+    # 1. FIX THE UI OUTPUT FORMATTING
+    if isinstance(extracted_data, list):
+        item_names = [f"{d.get('quantity', '')} {d.get('item', '')}".strip() for d in extracted_data]
+        formatted_items = ", ".join(item_names)
+    else:
+        formatted_items = "Unknown Items"
+        
+    # 2. MULTI-ITEM ROUTING & RANKING
+    zone_scores = []
     
     for zone in zones:
-        score = calculate_routing_score(extracted_item, zone)
-        if score > highest_score:
-            highest_score = score
-            best_zone = zone["region"]
+        total_score = 0
+        for item_obj in extracted_data:
+            score = calculate_routing_score(item_obj.get("item", ""), zone, confirmed_data)
+            total_score += score
+            
+        avg_score = total_score / len(extracted_data) if extracted_data else 0
+        zone_scores.append({
+            "zone": zone["region"], 
+            "score": round(avg_score, 1)
+        })
+        
+    # Sort zones by score descending
+    zone_scores.sort(key=lambda x: x["score"], reverse=True)
+    
+    # NEW: Filter out any zones that fall below our "worth considering" threshold (e.g., 20)
+    viable_zones = [z for z in zone_scores if z["score"] >= 20]
+    
+    # Now grab up to 3 of ONLY the viable zones
+    top_zones = viable_zones[:3]
+    
+    best_zone = top_zones[0]["zone"] if top_zones else "No suitable zone found"
+    highest_score = top_zones[0]["score"] if top_zones else -999
             
     return {
         "status": "Triage Complete",
         "original_text": manifest.raw_manifest,
-        "ai_directive": f" '{extracted_item}'. Suggested route: {best_zone} (Match Score: {highest_score}).",
-        "extracted_item": extracted_item, 
-        "best_zone": best_zone
+        "ai_directive": f"AI Extracted: {formatted_items}. Suggested route: {best_zone} (Match Score: {highest_score}).",
+        "extracted_item": formatted_items, # Passes the clean string to the confirmation DB
+        "best_zone": best_zone,
+        "top_routes": top_zones # Sent to the frontend for Phase 3 counter-offers
     }
 
 @app.get("/api/confirmed")
