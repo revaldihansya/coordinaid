@@ -6,7 +6,7 @@ A platform for NGOs and big support groups to better coordinate their donations 
 
 *   **Frontend:** React (scaffolded with Vite)
 *   **Backend:** Python (FastAPI)
-*   **AI Integration:** Google Gemini (`google-genai` SDK)
+*   **AI Integration:** OpenRouter, GroqCloud, Github Tokens, Gemini API
 *   **Database:** Persistent JSON file (`needs_database.json`)
 
 ---
